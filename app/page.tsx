@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useTransition, useEffect } from "react";
 import { generateStablePipeline } from "./actions/generateStablePipeline";
+import { RemoveBackgroundTester } from "./components/remove-background/Tester";
 import { splitSpritesheet, useFrameExtractor } from "./pre-processing/split";
 import { TalkingAnimation } from "./components/TalkingAnimation";
 import { Character } from "./components/Character";
@@ -284,6 +285,10 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <div className="mt-12">
+        <RemoveBackgroundTester />
+      </div>
     </div>
   );
 }
