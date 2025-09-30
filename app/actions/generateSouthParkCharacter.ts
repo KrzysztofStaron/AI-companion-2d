@@ -34,11 +34,13 @@ const MODEL_ID = "google/gemini-2.5-flash-image-preview";
 const SPRITE_REFERENCE_PATH = join(process.cwd(), "base", "sprite.png");
 const SPRITE2_REFERENCE_PATH = join(process.cwd(), "base", "sprite2.png");
 const SPRITE3_REFERENCE_PATH = join(process.cwd(), "base", "sprite3.png");
+const SPRITE4_REFERENCE_PATH = join(process.cwd(), "base", "sprite4.png");
 const STYLE_REFERENCE_PATH = join(process.cwd(), "base", "style.png");
 
 const spriteReferenceCache = { value: null as string | null };
 const sprite2ReferenceCache = { value: null as string | null };
 const sprite3ReferenceCache = { value: null as string | null };
+const sprite4ReferenceCache = { value: null as string | null };
 const styleReferenceCache = { value: null as string | null };
 
 type GenerateResult = {
@@ -136,10 +138,11 @@ export async function generateSouthParkCharacter(payload: GenerateRequest): Prom
     };
   }
 
-  const [spriteReference, sprite2Reference, sprite3Reference, styleReference] = await Promise.all([
+  const [spriteReference, sprite2Reference, sprite3Reference, sprite4Reference, styleReference] = await Promise.all([
     loadBase64Reference(SPRITE_REFERENCE_PATH, spriteReferenceCache),
     loadBase64Reference(SPRITE2_REFERENCE_PATH, sprite2ReferenceCache),
     loadBase64Reference(SPRITE3_REFERENCE_PATH, sprite3ReferenceCache),
+    loadBase64Reference(SPRITE4_REFERENCE_PATH, sprite4ReferenceCache),
     loadBase64Reference(STYLE_REFERENCE_PATH, styleReferenceCache),
   ]);
 
@@ -166,6 +169,12 @@ export async function generateSouthParkCharacter(payload: GenerateRequest): Prom
       ? {
           type: "image_url" as const,
           image_url: { url: sprite3Reference },
+        }
+      : null,
+    sprite4Reference
+      ? {
+          type: "image_url" as const,
+          image_url: { url: sprite4Reference },
         }
       : null,
     {
