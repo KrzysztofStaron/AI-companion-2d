@@ -24,7 +24,7 @@ export default function Home() {
   const [isGeneratingTalking, startGeneratingTalking] = useTransition();
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationSpeed, setAnimationSpeed] = useState(500); // milliseconds
-  const animationRef = useRef<NodeJS.Timeout | number>();
+  const animationRef = useRef<NodeJS.Timeout | number | undefined>(undefined);
   const currentFrameRef = useRef(0);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,7 +35,7 @@ export default function Home() {
     setTalkingFrames([]);
     setIsAnimating(false);
     if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
+      clearTimeout(animationRef.current);
     }
   };
 
