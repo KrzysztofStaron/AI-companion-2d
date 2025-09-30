@@ -1,103 +1,118 @@
+"use client";
+
 import Image from "next/image";
+import { useState, useTransition } from "react";
+import { generateSouthParkCharacter } from "./actions/generateSouthParkCharacter";
+
+type GenerateState = {
+  result?: string;
+  error?: string;
+  message?: string;
+  status?: number;
+};
+
+const initialState: GenerateState = {};
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [state, setState] = useState<GenerateState>(initialState);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedFile(file);
+    setState(initialState);
+  };
+
+  const handleGenerate = () => {
+    if (!selectedFile) {
+      setState({ error: "missing-image", message: "Select an image to continue." });
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const imageBuffer = await selectedFile.arrayBuffer();
+        const result = await generateSouthParkCharacter({
+          image: imageBuffer,
+          mimeType: selectedFile.type,
+        });
+        setState(result);
+      } catch (error) {
+        setState({
+          error: "client-error",
+          message: error instanceof Error ? error.message : "Something went wrong while generating the character.",
+        });
+      }
+    });
+  };
+
+  return (
+    <div className="p-8 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">South Park Character Generator</h1>
+
+      <div className="mb-8 space-y-6">
+        <div>
+          <label htmlFor="image" className="block text-sm font-medium mb-2 text-gray-800">
+            Upload Image
+          </label>
+          <input
+            type="file"
+            id="image"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="w-full rounded border border-gray-300 bg-white p-4 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={isPending || !selectedFile}
+          className="w-full rounded bg-blue-600 py-3 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          {isPending ? "Generating..." : "Generate South Park Character"}
+        </button>
+      </div>
+
+      <div id="result" className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold">Result</h2>
+          {state.result && (
+            <a
+              href={state.result}
+              download="south-park-character.png"
+              className="inline-flex items-center rounded border border-green-600 px-3 py-1 text-sm font-medium text-green-700 transition hover:bg-green-600 hover:text-white"
+            >
+              Download
+            </a>
+          )}
+        </div>
+
+        <div className="flex min-h-[240px] items-center justify-center rounded border border-dashed border-gray-300 bg-white p-6">
+          {state.result ? (
+            <div className="text-center">
+              <Image
+                src={state.result}
+                alt="Generated South Park character"
+                width={320}
+                height={320}
+                className="mx-auto rounded shadow-sm"
+                unoptimized
+              />
+            </div>
+          ) : state.error ? (
+            <div className="text-center text-sm text-red-600">
+              <p className="font-medium">Something went wrong</p>
+              <p className="mt-1 text-xs text-red-500">{state.message ?? "Please try again."}</p>
+            </div>
+          ) : (
+            <div className="text-center text-sm text-gray-500">
+              Upload an image and click generate to see the transformation.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
