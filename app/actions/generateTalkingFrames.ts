@@ -180,6 +180,12 @@ export async function generateTalkingFrames(
           mouth_state: "open_talking2",
           expression: "talking_emphasized",
         },
+        {
+          name: "mouth_open_talking3",
+          description: "Blend between mouth_open_talking1 and mouth_open_talking2",
+          mouth_state: "open_talking3",
+          expression: "talking_emphasized",
+        },
       ],
       transitions: {
         timing: "smooth",
@@ -198,9 +204,9 @@ export async function generateTalkingFrames(
       background: "#FFFFFF",
       layout: {
         type: "grid",
-        columns: 2,
+        columns: 3,
         rows: 1,
-        frame_order: ["mouth_open_talking1", "mouth_open_talking2"],
+        frame_order: ["mouth_open_talking1", "mouth_open_talking2", "mouth_open_talking3"],
       },
       alignment: {
         baseline: "consistent across frames",
@@ -226,7 +232,7 @@ export async function generateTalkingFrames(
       transparency: false,
       color_profile: "sRGB",
       notes:
-        "This sprite sheet will be used for character mouth animation with two different talking positions. Focus only on mouth movement variations while keeping the rest of the character identical to the base frame.",
+        "This sprite sheet will be used for character mouth animation with three different talking positions. Focus only on mouth movement variations while keeping the rest of the character identical to the base frame.",
     },
     references: {
       base_character_frame: true,
