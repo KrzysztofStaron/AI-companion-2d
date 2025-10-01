@@ -182,7 +182,7 @@ export async function generateTalkingFrames(
         },
         {
           name: "mouth_open_talking3",
-          description: "Blend between mouth_open_talking1 and mouth_open_talking2",
+          description: "Blend between mouth_open_talking1 and mouth_open_talking2, make sure all frames are different",
           mouth_state: "open_talking3",
           expression: "talking_emphasized",
         },
