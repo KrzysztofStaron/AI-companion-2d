@@ -2,13 +2,13 @@
 
 import Image from "next/image";
 import { useState, useTransition, useEffect } from "react";
-import { generateSouthParkCharacter } from "./actions/generateSouthParkCharacter";
-import { generateTalkingFrames } from "./actions/generateTalkingFrames";
+import { generateStablePipeline } from "./actions/generateStablePipeline";
 import { splitSpritesheet } from "./pre-processing/split";
 import { TalkingAnimation } from "./components/TalkingAnimation";
 
 type GenerateState = {
-  result?: string;
+  baseImageUrl?: string;
+  talkingAnimationUrl?: string;
   error?: string;
   message?: string;
   status?: number;
@@ -44,38 +44,36 @@ export default function Home() {
     startTransition(async () => {
       try {
         const imageBuffer = await selectedFile.arrayBuffer();
-        const result = await generateSouthParkCharacter({
+        const result = await generateStablePipeline({
           image: imageBuffer,
           mimeType: selectedFile.type,
+          seed: Date.now(), // Use timestamp as seed for consistent results
         });
-        setState(result);
 
-        // Automatically split the returned image when ready
-        if (result.result) {
-          try {
-            const frames = await splitSpritesheet(result.result, 2, 2);
-            setSpriteFrames(frames);
+        if (result.error) {
+          setState(result);
+        } else {
+          setState(result);
 
-            // Generate talking frames using the first frame
-            if (frames.length > 0) {
-              startGeneratingTalking(async () => {
-                try {
-                  const talkingResult = await generateTalkingFrames({
-                    firstFrame: frames[0],
-                  });
-
-                  if (talkingResult.result) {
-                    const talkingSpriteFrames = await splitSpritesheet(talkingResult.result, 3, 1);
-                    setTalkingFrames(talkingSpriteFrames);
-                    setCurrentFrame(0); // Reset to first frame when new talking frames are loaded
-                  }
-                } catch (talkingError) {
-                  console.error("Failed to generate talking frames:", talkingError);
-                }
-              });
+          // Split the base image into sprite frames
+          if (result.baseImageUrl) {
+            try {
+              const frames = await splitSpritesheet(result.baseImageUrl, 2, 2);
+              setSpriteFrames(frames);
+            } catch (splitError) {
+              console.error("Failed to split base sprite sheet:", splitError);
             }
-          } catch (splitError) {
-            console.error("Failed to split sprite sheet:", splitError);
+          }
+
+          // Split the talking animation into frames
+          if (result.talkingAnimationUrl) {
+            try {
+              const talkingSpriteFrames = await splitSpritesheet(result.talkingAnimationUrl, 3, 1);
+              setTalkingFrames(talkingSpriteFrames);
+              setCurrentFrame(0);
+            } catch (talkingSplitError) {
+              console.error("Failed to split talking frames:", talkingSplitError);
+            }
           }
         }
       } catch (error) {
@@ -111,46 +109,91 @@ export default function Home() {
           disabled={isPending || !selectedFile}
           className="w-full rounded bg-blue-600 py-3 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
         >
-          {isPending ? "Generating..." : "Generate South Park Character"}
+          {isPending ? "Generating Pipeline..." : "Generate Base + Talking Animation"}
         </button>
       </div>
 
       <div id="result" className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Result</h2>
-          {state.result && (
-            <a
-              href={state.result}
-              download="south-park-character.png"
-              className="inline-flex items-center rounded border border-green-600 px-3 py-1 text-sm font-medium text-green-700 transition hover:bg-green-600 hover:text-white"
-            >
-              Download
-            </a>
+          <h2 className="text-xl font-bold">Results</h2>
+          {state.baseImageUrl && (
+            <div className="flex gap-2">
+              <a
+                href={state.baseImageUrl}
+                download="base.png"
+                className="inline-flex items-center rounded border border-green-600 px-3 py-1 text-sm font-medium text-green-700 transition hover:bg-green-600 hover:text-white"
+              >
+                Download Base
+              </a>
+              {state.talkingAnimationUrl && (
+                <a
+                  href={state.talkingAnimationUrl}
+                  download="talkingAnimation.png"
+                  className="inline-flex items-center rounded border border-blue-600 px-3 py-1 text-sm font-medium text-blue-700 transition hover:bg-blue-600 hover:text-white"
+                >
+                  Download Animation
+                </a>
+              )}
+            </div>
           )}
         </div>
 
-        <div className="flex min-h-[240px] items-center justify-center rounded border border-dashed border-gray-300 bg-white p-6">
-          {state.result ? (
-            <div className="text-center">
-              <Image
-                src={state.result}
-                alt="Generated South Park character"
-                width={320}
-                height={320}
-                className="mx-auto rounded shadow-sm"
-                unoptimized
-              />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Base Character */}
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Base Character</h3>
+            <div className="flex min-h-[240px] items-center justify-center rounded border border-dashed border-gray-300 bg-white p-6">
+              {state.baseImageUrl ? (
+                <div className="text-center">
+                  <Image
+                    src={state.baseImageUrl}
+                    alt="Generated South Park character base"
+                    width={200}
+                    height={200}
+                    className="mx-auto rounded shadow-sm"
+                    unoptimized
+                  />
+                </div>
+              ) : state.error ? (
+                <div className="text-center text-sm text-red-600">
+                  <p className="font-medium">Something went wrong</p>
+                  <p className="mt-1 text-xs text-red-500">{state.message ?? "Please try again."}</p>
+                </div>
+              ) : (
+                <div className="text-center text-sm text-gray-500">
+                  Upload an image and click generate to see the transformation.
+                </div>
+              )}
             </div>
-          ) : state.error ? (
-            <div className="text-center text-sm text-red-600">
-              <p className="font-medium">Something went wrong</p>
-              <p className="mt-1 text-xs text-red-500">{state.message ?? "Please try again."}</p>
+          </div>
+
+          {/* Talking Animation */}
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Talking Animation</h3>
+            <div className="flex min-h-[240px] items-center justify-center rounded border border-dashed border-gray-300 bg-white p-6">
+              {state.talkingAnimationUrl ? (
+                <div className="text-center">
+                  <Image
+                    src={state.talkingAnimationUrl}
+                    alt="Generated talking animation frames"
+                    width={300}
+                    height={100}
+                    className="mx-auto rounded shadow-sm"
+                    unoptimized
+                  />
+                </div>
+              ) : state.error ? (
+                <div className="text-center text-sm text-red-600">
+                  <p className="font-medium">Animation generation failed</p>
+                  <p className="mt-1 text-xs text-red-500">{state.message ?? "Please try again."}</p>
+                </div>
+              ) : (
+                <div className="text-center text-sm text-gray-500">
+                  Talking animation will appear here after generation.
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center text-sm text-gray-500">
-              Upload an image and click generate to see the transformation.
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
