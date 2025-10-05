@@ -3,8 +3,9 @@
 import Image from "next/image";
 import { useState, useTransition, useEffect } from "react";
 import { generateStablePipeline } from "./actions/generateStablePipeline";
-import { splitSpritesheet } from "./pre-processing/split";
+import { splitSpritesheet, useFrameExtractor } from "./pre-processing/split";
 import { TalkingAnimation } from "./components/TalkingAnimation";
+import { Character } from "./components/Character";
 
 type GenerateState = {
   baseImageUrl?: string;
@@ -25,6 +26,9 @@ export default function Home() {
   const [isGeneratingTalking, startGeneratingTalking] = useTransition();
   const [animationSpeed, setAnimationSpeed] = useState(500); // milliseconds
   const [currentFrame, setCurrentFrame] = useState(0);
+
+  // Use the frame extractor hook for easy frame management
+  const frameExtractor = useFrameExtractor();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -55,20 +59,25 @@ export default function Home() {
         } else {
           setState(result);
 
-          // Split the base image into sprite frames
+          // Split the base image into sprite frames using the enhanced extractor
           if (result.baseImageUrl) {
             try {
-              const frames = await splitSpritesheet(result.baseImageUrl, 2, 2);
+              const frames = await frameExtractor.extractFrames(result.baseImageUrl, 2, 2, "base-sprite");
               setSpriteFrames(frames);
             } catch (splitError) {
               console.error("Failed to split base sprite sheet:", splitError);
             }
           }
 
-          // Split the talking animation into frames
+          // Split the talking animation into frames using the enhanced extractor
           if (result.talkingAnimationUrl) {
             try {
-              const talkingSpriteFrames = await splitSpritesheet(result.talkingAnimationUrl, 3, 1);
+              const talkingSpriteFrames = await frameExtractor.extractFrames(
+                result.talkingAnimationUrl,
+                3,
+                1,
+                "talking-animation"
+              );
               setTalkingFrames(talkingSpriteFrames);
               setCurrentFrame(0);
             } catch (talkingSplitError) {
@@ -227,6 +236,53 @@ export default function Home() {
           currentFrame={currentFrame}
           onFrameChange={setCurrentFrame}
         />
+      )}
+
+      {/* Enhanced Character Component with Animation Manager */}
+      {spriteFrames.length > 0 && talkingFrames.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">Enhanced Character Animation</h2>
+            <p className="text-sm text-gray-600">
+              Cache: {frameExtractor.cacheSize} | Frames: Base({spriteFrames.length}) Talking({talkingFrames.length})
+            </p>
+          </div>
+
+          <div className="flex min-h-[300px] items-center justify-center rounded border border-dashed border-gray-300 bg-white p-6">
+            {(() => {
+              const characterComponent = Character({
+                baseFrames: spriteFrames,
+                talkingFrames: talkingFrames,
+                initialAnimation: "idle",
+                width: 250,
+                height: 250,
+                className: "enhanced-character-demo",
+              });
+              return characterComponent.render();
+            })()}
+          </div>
+
+          <div className="text-sm text-gray-600">
+            <p>
+              <strong>Frame Extractor Features:</strong>
+            </p>
+            <ul className="list-disc list-inside space-y-1 mt-2">
+              <li>Caching: Frames are cached for performance</li>
+              <li>Easy Access: Get individual frames by index</li>
+              <li>Multiple Sprite Sheets: Handle different animation types</li>
+              <li>React Hook: useFrameExtractor() for easy integration</li>
+            </ul>
+            <p className="mt-2">
+              <strong>Character Manager Features:</strong>
+            </p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Animation States: playing, paused, stopped</li>
+              <li>Multiple Animations: idle, talking, walking, dancing</li>
+              <li>Frame Control: playAnimation(), pauseAnimation(), etc.</li>
+              <li>React Integration: Both component and hook versions</li>
+            </ul>
+          </div>
+        </div>
       )}
     </div>
   );
