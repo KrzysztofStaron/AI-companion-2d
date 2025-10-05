@@ -35,6 +35,13 @@ export default function Page() {
     const userMessage: ChatMessage = { role: "user", content: inputValue.trim() };
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = "2.5rem";
+      setTextareaHeight(50);
+    }
+
     setIsLoading(true);
     try {
       const result = await chatWithAI([...messages, userMessage]);

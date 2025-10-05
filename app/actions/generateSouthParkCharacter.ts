@@ -41,7 +41,6 @@ type OpenRouterTextChoice = {
 };
 
 const MODEL_ID = "google/gemini-2.5-flash-image-preview";
-const TEXT_MODEL_ID = "openai/gpt-oss-120b";
 
 const SPRITE_REFERENCE_PATH = join(process.cwd(), "base", "sprite.png");
 const SPRITE2_REFERENCE_PATH = join(process.cwd(), "base", "sprite2.png");
@@ -176,7 +175,7 @@ async function derivePromptFromImage(apiKey: string, imageDataUrl: string): Prom
         "X-Title": process.env.OPENROUTER_SITE_NAME ?? "South Park Character Generator",
       },
       body: JSON.stringify({
-        model: TEXT_MODEL_ID,
+        model: process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b",
         messages: [
           {
             role: "system",

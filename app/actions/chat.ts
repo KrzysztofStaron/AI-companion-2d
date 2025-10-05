@@ -13,7 +13,7 @@ export async function chatWithAI(messages: Message[]): Promise<{ content: string
     return { content: "", error: "Missing OPENROUTER_API_KEY" };
   }
 
-  const model = process.env.OPENROUTER_MODEL || "gpt-4.1-nano-2025-04-14";
+  const model = process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b";
 
   let response: Response;
 
