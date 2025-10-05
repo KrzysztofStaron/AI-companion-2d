@@ -32,6 +32,8 @@ export default function Page() {
   const frameExtractor = useFrameExtractor();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const talkingAnimationRef = useRef<number | null>(null);
 
   const hasMultipleLines = useMemo(() => textareaHeight > 50, [textareaHeight]);
 
@@ -49,6 +51,175 @@ export default function Page() {
     setInputBorderRadius(calculateBorderRadius());
   }, [inputValue]);
 
+  // TTS function using OpenAI API
+  const generateTTS = async (text: string) => {
+    try {
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error("TTS generation failed");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        audioRef.current.play();
+
+        // Start talking animation while audio plays
+        startTalkingAnimation();
+
+        // Stop talking animation when audio ends
+        audioRef.current.onended = () => {
+          stopTalkingAnimation();
+        };
+      }
+    } catch (error) {
+      console.error("TTS error:", error);
+    }
+  };
+
+  // Talking animation function
+  const startTalkingAnimation = () => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let startTime = Date.now();
+    const mouthFrameDuration = 200; // Switch mouth every 200ms
+    const amplitudeX = 4; // Horizontal wobble amplitude
+    const amplitudeY = 6; // Vertical wobble amplitude
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+
+      // Calculate aggressive elastic head wobble with multiple frequencies
+      const wobbleX =
+        Math.sin(elapsed * 0.015) * amplitudeX +
+        Math.sin(elapsed * 0.025) * amplitudeX * 0.5 +
+        Math.sin(elapsed * 0.035) * amplitudeX * 0.3;
+      const wobbleY =
+        Math.cos(elapsed * 0.012) * amplitudeY +
+        Math.cos(elapsed * 0.022) * amplitudeY * 0.6 +
+        Math.cos(elapsed * 0.032) * amplitudeY * 0.4;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw body (no animation)
+      if (bodyImg.current?.complete) {
+        ctx.drawImage(bodyImg.current, 0, 0, 300, 300);
+      }
+
+      // Draw head group with talking animation and wobble
+      if (headImg.current?.complete) {
+        ctx.save();
+        ctx.translate(wobbleX, wobbleY + 3);
+        ctx.drawImage(headImg.current, 0, 0, 300, 300);
+        ctx.restore();
+      }
+
+      if (eyesImg.current?.complete) {
+        ctx.save();
+        ctx.translate(wobbleX, wobbleY + 3);
+        ctx.drawImage(eyesImg.current, 0, 0, 300, 300);
+        ctx.restore();
+      }
+
+      // Alternate between mouth1 and mouth2 for talking animation
+      const mouthFrame = Math.floor(elapsed / mouthFrameDuration) % 2;
+      const currentMouth = mouthFrame === 0 ? mouthImg1.current : mouthImg2.current;
+
+      if (currentMouth?.complete) {
+        ctx.save();
+        ctx.translate(wobbleX, wobbleY + 3);
+        ctx.drawImage(currentMouth, 0, 0, 300, 300);
+        ctx.restore();
+      }
+
+      if (hairImg.current?.complete) {
+        ctx.save();
+        ctx.translate(wobbleX, wobbleY + 3);
+        ctx.drawImage(hairImg.current, 0, 0, 300, 300);
+        ctx.restore();
+      }
+
+      // Draw 2 dots with wobble
+      ctx.save();
+      ctx.translate(wobbleX, wobbleY + 3);
+      ctx.fillStyle = "#000000";
+      ctx.beginPath();
+      ctx.arc(130, 140, 2.5, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(170, 140, 2.5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.restore();
+
+      // Continue animation
+      talkingAnimationRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+  };
+
+  const stopTalkingAnimation = () => {
+    if (talkingAnimationRef.current) {
+      cancelAnimationFrame(talkingAnimationRef.current);
+      talkingAnimationRef.current = null;
+    }
+
+    // Return to static pose
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw static character
+      if (bodyImg.current?.complete) {
+        ctx.drawImage(bodyImg.current, 0, 0, 300, 300);
+      }
+
+      if (headImg.current?.complete) {
+        ctx.drawImage(headImg.current, 0, 3, 300, 300);
+      }
+
+      if (eyesImg.current?.complete) {
+        ctx.drawImage(eyesImg.current, 0, 3, 300, 300);
+      }
+
+      if (mouthImg1.current?.complete) {
+        ctx.drawImage(mouthImg1.current, 0, 3, 300, 300);
+      }
+
+      if (hairImg.current?.complete) {
+        ctx.drawImage(hairImg.current, 0, 3, 300, 300);
+      }
+
+      // Draw 2 dots
+      ctx.fillStyle = "#000000";
+      ctx.beginPath();
+      ctx.arc(130, 143, 2.5, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(170, 143, 2.5, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  };
+
   // Animation function for head shaking
   const animateHead = () => {
     if (!canvasRef.current) return;
@@ -59,7 +230,8 @@ export default function Page() {
 
     let startTime = Date.now();
     const duration = 2000; // 2 seconds
-    const amplitude = 3; // -10 to +10 pixels
+    const amplitudeX = 3; // Horizontal shake amplitude
+    const amplitudeY = 2.5; // Vertical shake amplitude
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
@@ -69,9 +241,9 @@ export default function Page() {
       const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
       const easedProgress = easeInOut(progress);
 
-      // Calculate shake offset
-      const shakeX = Math.sin(elapsed * 0.01) * amplitude * (1 - easedProgress);
-      const shakeY = Math.cos(elapsed * 0.008) * amplitude * (1 - easedProgress);
+      // Calculate shake offset with separate X and Y amplitudes
+      const shakeX = Math.sin(elapsed * 0.01) * amplitudeX * (1 - easedProgress);
+      const shakeY = Math.cos(elapsed * 0.008) * amplitudeY * (1 - easedProgress);
 
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -210,7 +382,7 @@ export default function Page() {
         };
         headImgElement.src = "/head.svg";
       };
-      bodyImgElement.src = "/body.svg";
+      bodyImgElement.src = "/body.png";
     }
   }, [generateState.baseImageUrl]);
 
@@ -269,6 +441,11 @@ export default function Page() {
       } else {
         const reply: ChatMessage = { role: "assistant", content: result.content || "No response" };
         setMessages(prev => [...prev, reply]);
+
+        // Generate TTS for AI response
+        if (result.content) {
+          generateTTS(result.content);
+        }
       }
     } catch (error) {
       setMessages(prev => [...prev, { role: "assistant", content: "Something went wrong. Try again." }]);
@@ -355,6 +532,7 @@ export default function Page() {
                     height={300}
                     className="mx-auto border border-white/20 rounded-lg"
                   />
+                  <audio ref={audioRef} />
                   <div className="text-xs text-white/50 text-center mt-4">Character Generated</div>
                 </div>
               </div>
