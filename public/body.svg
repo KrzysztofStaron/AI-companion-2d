@@ -1,0 +1,13 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<!-- Created using Krita: https://krita.org -->
+<svg xmlns="http://www.w3.org/2000/svg" 
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:krita="http://krita.org/namespaces/svg/krita"
+    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+    width="367.084pt"
+    height="412.095pt"
+    viewBox="0 0 367.084 412.095">
+<defs/>
+<path id="shape0" transform="translate(70.1283836805133, 256.085819937395)" fill="#f6d9b5" fill-rule="evenodd" stroke="#000000" stroke-width="5.00114780704173" stroke-linecap="square" stroke-linejoin="bevel" d="M38.6669 86.4222C41.5709 91.4399 41.0351 99.2875 37.0595 109.965L36.5412 133.684C85.9379 135.667 138.512 135.744 194.577 133.726L194.482 111.076C195.524 112.342 196.878 112.858 198.241 113.881C206.715 120.237 218.602 119.257 225.919 111.598C233.236 103.939 232.991 90.581 226.255 82.4064C226.255 82.4064 221.609 36.8572 189.689 1.60621C170.844 19.5947 144.353 26.8617 116.366 26.6776C88.3792 26.4935 59.8823 18.2343 41.3528 0C9.43231 35.251 5.10221 82.159 5.10221 82.159C-1.63379 90.3336 -1.87942 103.692 5.43786 111.351C12.7551 119.009 24.6423 119.99 33.1154 113.633C34.1266 112.875 35.4452 111.581 37.0713 109.752M194.631 110.431C189.2 103.829 188.238 94.3624 192.69 86.6696" sodipodi:nodetypes="ccccccccccccccccc"/><path id="shape1" transform="translate(111.977056639763, 385.338422787678)" sodipodi:type="arc" sodipodi:rx="57.3881710858034" sodipodi:ry="18.5042468860544" sodipodi:cx="36.1819471438469" sodipodi:cy="18.5042626309416" sodipodi:start="4.03022083025187" sodipodi:end="5.34726450312753" sodipodi:open="true" d="M70.2176 3.60565C49.1662 -1.3943 20.2947 -1.17412 -7.10543e-15 4.14113" fill="none" stroke="#000000" stroke-width="5.00114780704173" stroke-linecap="square" stroke-linejoin="bevel"/><path id="shape01" transform="translate(187.667390987606, 385.780359236546)" sodipodi:type="arc" sodipodi:rx="57.3881710858034" sodipodi:ry="18.5042468860544" sodipodi:cx="36.1819471438469" sodipodi:cy="18.5042626309416" sodipodi:start="4.03022083025187" sodipodi:end="5.34726450312753" sodipodi:open="true" d="M70.2176 3.60565C49.1662 -1.3943 20.2947 -1.17412 -7.10543e-15 4.14113" fill="none" stroke="#000000" stroke-width="5.00114780704173" stroke-linecap="square" stroke-linejoin="bevel"/>
+</svg>
