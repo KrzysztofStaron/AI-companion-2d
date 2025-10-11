@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import LiquidGlass from "../components/ui/LiquidGlass";
+import ChatInput from "../components/ChatInput";
+import CharacterRenderer from "../components/CharacterRenderer";
 import { chatWithAI } from "../actions/chat";
 import { generateStablePipeline } from "../actions/generateStablePipeline";
-import { splitSpritesheet, useFrameExtractor } from "../pre-processing/split";
-import Image from "next/image";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -19,37 +19,12 @@ type GenerateState = {
 
 export default function Page() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [inputBorderRadius, setInputBorderRadius] = useState(50);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [textareaHeight, setTextareaHeight] = useState(40);
 
   // Character generation state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [generateState, setGenerateState] = useState<GenerateState>({});
   const [isPending, startTransition] = useTransition();
-  const frameExtractor = useFrameExtractor();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const talkingAnimationRef = useRef<number | null>(null);
-
-  const hasMultipleLines = useMemo(() => textareaHeight > 50, [textareaHeight]);
-
-  function calculateBorderRadius() {
-    if (!textareaRef.current) return 50;
-    const currentHeight = textareaRef.current.scrollHeight;
-    const twoLineHeight = 60;
-    const baseRadius = 50;
-    const minRadius = 12;
-    if (currentHeight <= twoLineHeight) return baseRadius;
-    return minRadius;
-  }
-
-  useEffect(() => {
-    setInputBorderRadius(calculateBorderRadius());
-  }, [inputValue]);
 
   // TTS function using OpenAI API
   const generateTTS = async (text: string) => {
@@ -69,322 +44,26 @@ export default function Page() {
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
 
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.play();
+      // Create audio element and play
+      const audio = new Audio(audioUrl);
 
-        // Start talking animation while audio plays
-        startTalkingAnimation();
-
-        // Stop talking animation when audio ends
-        audioRef.current.onended = () => {
-          stopTalkingAnimation();
-        };
+      // Start talking animation while audio plays
+      if ((window as any).startTalkingAnimation) {
+        (window as any).startTalkingAnimation();
       }
+
+      audio.play();
+
+      // Stop talking animation when audio ends
+      audio.onended = () => {
+        if ((window as any).stopTalkingAnimation) {
+          (window as any).stopTalkingAnimation();
+        }
+      };
     } catch (error) {
       console.error("TTS error:", error);
     }
   };
-
-  // Talking animation function
-  const startTalkingAnimation = () => {
-    if (!canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let startTime = Date.now();
-    const mouthFrameDuration = 200; // Switch mouth every 200ms
-    const amplitudeX = 4; // Horizontal wobble amplitude
-    const amplitudeY = 6; // Vertical wobble amplitude
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-
-      // Calculate aggressive elastic head wobble with multiple frequencies
-      const wobbleX =
-        Math.sin(elapsed * 0.015) * amplitudeX +
-        Math.sin(elapsed * 0.025) * amplitudeX * 0.5 +
-        Math.sin(elapsed * 0.035) * amplitudeX * 0.3;
-      const wobbleY =
-        Math.cos(elapsed * 0.012) * amplitudeY +
-        Math.cos(elapsed * 0.022) * amplitudeY * 0.6 +
-        Math.cos(elapsed * 0.032) * amplitudeY * 0.4;
-
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw body (no animation)
-      if (bodyImg.current?.complete) {
-        ctx.drawImage(bodyImg.current, 0, 0, 300, 300);
-      }
-
-      // Draw head group with talking animation and wobble
-      if (headImg.current?.complete) {
-        ctx.save();
-        ctx.translate(wobbleX, wobbleY + 3);
-        ctx.drawImage(headImg.current, 0, 0, 300, 300);
-        ctx.restore();
-      }
-
-      if (eyesImg.current?.complete) {
-        ctx.save();
-        ctx.translate(wobbleX, wobbleY + 3);
-        ctx.drawImage(eyesImg.current, 0, 0, 300, 300);
-        ctx.restore();
-      }
-
-      // Alternate between mouth1 and mouth2 for talking animation
-      const mouthFrame = Math.floor(elapsed / mouthFrameDuration) % 2;
-      const currentMouth = mouthFrame === 0 ? mouthImg1.current : mouthImg2.current;
-
-      if (currentMouth?.complete) {
-        ctx.save();
-        ctx.translate(wobbleX, wobbleY + 3);
-        ctx.drawImage(currentMouth, 0, 0, 300, 300);
-        ctx.restore();
-      }
-
-      if (hairImg.current?.complete) {
-        ctx.save();
-        ctx.translate(wobbleX, wobbleY + 3);
-        ctx.drawImage(hairImg.current, 0, 0, 300, 300);
-        ctx.restore();
-      }
-
-      // Draw 2 dots with wobble
-      ctx.save();
-      ctx.translate(wobbleX, wobbleY + 3);
-      ctx.fillStyle = "#000000";
-      ctx.beginPath();
-      ctx.arc(130, 140, 2.5, 0, 2 * Math.PI);
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(170, 140, 2.5, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.restore();
-
-      // Continue animation
-      talkingAnimationRef.current = requestAnimationFrame(animate);
-    };
-
-    animate();
-  };
-
-  const stopTalkingAnimation = () => {
-    if (talkingAnimationRef.current) {
-      cancelAnimationFrame(talkingAnimationRef.current);
-      talkingAnimationRef.current = null;
-    }
-
-    // Return to static pose
-    if (canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw static character
-      if (bodyImg.current?.complete) {
-        ctx.drawImage(bodyImg.current, 0, 0, 300, 300);
-      }
-
-      if (headImg.current?.complete) {
-        ctx.drawImage(headImg.current, 0, 3, 300, 300);
-      }
-
-      if (eyesImg.current?.complete) {
-        ctx.drawImage(eyesImg.current, 0, 3, 300, 300);
-      }
-
-      if (mouthImg1.current?.complete) {
-        ctx.drawImage(mouthImg1.current, 0, 3, 300, 300);
-      }
-
-      if (hairImg.current?.complete) {
-        ctx.drawImage(hairImg.current, 0, 3, 300, 300);
-      }
-
-      // Draw 2 dots
-      ctx.fillStyle = "#000000";
-      ctx.beginPath();
-      ctx.arc(130, 143, 2.5, 0, 2 * Math.PI);
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(170, 143, 2.5, 0, 2 * Math.PI);
-      ctx.fill();
-    }
-  };
-
-  // Animation function for head shaking
-  const animateHead = () => {
-    if (!canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let startTime = Date.now();
-    const duration = 2000; // 2 seconds
-    const amplitudeX = 3; // Horizontal shake amplitude
-    const amplitudeY = 2.5; // Vertical shake amplitude
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = elapsed / duration;
-
-      // Smooth easing function (ease-in-out)
-      const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t);
-      const easedProgress = easeInOut(progress);
-
-      // Calculate shake offset with separate X and Y amplitudes
-      const shakeX = Math.sin(elapsed * 0.01) * amplitudeX * (1 - easedProgress);
-      const shakeY = Math.cos(elapsed * 0.008) * amplitudeY * (1 - easedProgress);
-
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw body (no animation)
-      if (bodyImg.current?.complete) {
-        ctx.drawImage(bodyImg.current, 0, 0, 300, 300);
-      }
-
-      // Draw head group with shake animation
-      if (headImg.current?.complete) {
-        ctx.save();
-        ctx.translate(shakeX, shakeY + 3);
-        ctx.drawImage(headImg.current, 0, 0, 300, 300);
-        ctx.restore();
-      }
-
-      if (eyesImg.current?.complete) {
-        ctx.save();
-        ctx.translate(shakeX, shakeY + 3);
-        ctx.drawImage(eyesImg.current, 0, 0, 300, 300);
-        ctx.restore();
-      }
-
-      // Alternate between mouth1 and mouth2 for talking animation
-      const mouthFrame = Math.floor(elapsed / 200) % 2; // Switch every 200ms
-      const currentMouth = mouthFrame === 0 ? mouthImg1.current : mouthImg2.current;
-
-      if (currentMouth?.complete) {
-        ctx.save();
-        ctx.translate(shakeX, shakeY + 3);
-        ctx.drawImage(currentMouth, 0, 0, 300, 300);
-        ctx.restore();
-      }
-
-      if (hairImg.current?.complete) {
-        ctx.save();
-        ctx.translate(shakeX, shakeY + 3);
-        ctx.drawImage(hairImg.current, 0, 0, 300, 300);
-        ctx.restore();
-      }
-
-      // Draw 2 dots with same size as line stroke
-      ctx.save();
-      ctx.translate(shakeX, shakeY + 3);
-      ctx.fillStyle = "#000000";
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = 5; // Same as SVG stroke width
-
-      // First dot
-      ctx.beginPath();
-      ctx.arc(130, 140, 2.5, 0, 2 * Math.PI);
-      ctx.fill();
-
-      // Second dot
-      ctx.beginPath();
-      ctx.arc(170, 140, 2.5, 0, 2 * Math.PI);
-      ctx.fill();
-
-      ctx.restore();
-
-      // Continue animation if not finished
-      if (elapsed < duration) {
-        animationRef.current = requestAnimationFrame(animate);
-      }
-    };
-
-    animate();
-  };
-
-  // Store image references for animation
-  const bodyImg = useRef<HTMLImageElement | null>(null);
-  const headImg = useRef<HTMLImageElement | null>(null);
-  const eyesImg = useRef<HTMLImageElement | null>(null);
-  const mouthImg1 = useRef<HTMLImageElement | null>(null);
-  const mouthImg2 = useRef<HTMLImageElement | null>(null);
-  const hairImg = useRef<HTMLImageElement | null>(null);
-
-  // Draw character on canvas using SVG elements
-  useEffect(() => {
-    if (generateState.baseImageUrl && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      // Set canvas size
-      canvas.width = 300;
-      canvas.height = 300;
-
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Group 1: Body (just body)
-      const bodyImgElement = document.createElement("img") as HTMLImageElement;
-      bodyImgElement.onload = () => {
-        bodyImg.current = bodyImgElement;
-        ctx.drawImage(bodyImgElement, 0, 0, 300, 300);
-
-        // Group 2: Head (head + eyes + mouth + hair)
-        const headImgElement = document.createElement("img") as HTMLImageElement;
-        headImgElement.onload = () => {
-          headImg.current = headImgElement;
-          ctx.drawImage(headImgElement, 0, 0, 300, 300);
-
-          const eyesImgElement = document.createElement("img") as HTMLImageElement;
-          eyesImgElement.onload = () => {
-            eyesImg.current = eyesImgElement;
-            ctx.drawImage(eyesImgElement, 0, 0, 300, 300);
-
-            const mouthImg1Element = document.createElement("img") as HTMLImageElement;
-            mouthImg1Element.onload = () => {
-              mouthImg1.current = mouthImg1Element;
-              ctx.drawImage(mouthImg1Element, 0, 0, 300, 300);
-
-              const mouthImg2Element = document.createElement("img") as HTMLImageElement;
-              mouthImg2Element.onload = () => {
-                mouthImg2.current = mouthImg2Element;
-
-                const hairImgElement = document.createElement("img") as HTMLImageElement;
-                hairImgElement.onload = () => {
-                  hairImg.current = hairImgElement;
-                  ctx.drawImage(hairImgElement, 0, 0, 300, 300);
-
-                  // Start head shaking animation
-                  setTimeout(() => {
-                    animateHead();
-                  }, 500); // Start after 500ms
-                };
-                hairImgElement.src = "/hair.svg";
-              };
-              mouthImg2Element.src = "/mouth2.png";
-            };
-            mouthImg1Element.src = "/mouth1.svg";
-          };
-          eyesImgElement.src = "/eyes.svg";
-        };
-        headImgElement.src = "/head.svg";
-      };
-      bodyImgElement.src = "/body.png";
-    }
-  }, [generateState.baseImageUrl]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -421,17 +100,10 @@ export default function Page() {
     });
   };
 
-  const handleSubmit = async () => {
-    if (!inputValue.trim() || isLoading) return;
-    const userMessage: ChatMessage = { role: "user", content: inputValue.trim() };
+  const handleSubmit = async (message: string) => {
+    if (!message.trim() || isLoading) return;
+    const userMessage: ChatMessage = { role: "user", content: message.trim() };
     setMessages(prev => [...prev, userMessage]);
-    setInputValue("");
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = "2.5rem";
-      setTextareaHeight(50);
-    }
 
     setIsLoading(true);
     try {
@@ -523,20 +195,7 @@ export default function Page() {
             )}
 
             {/* Character Display */}
-            {generateState.baseImageUrl && (
-              <div className="relative">
-                <div className="character-display">
-                  <canvas
-                    ref={canvasRef}
-                    width={300}
-                    height={300}
-                    className="mx-auto border border-white/20 rounded-lg"
-                  />
-                  <audio ref={audioRef} />
-                  <div className="text-xs text-white/50 text-center mt-4">Character Generated</div>
-                </div>
-              </div>
-            )}
+            {generateState.baseImageUrl && <CharacterRenderer baseImageUrl={generateState.baseImageUrl} />}
           </div>
         </div>
 
@@ -570,79 +229,7 @@ export default function Page() {
           </div>
 
           {/* Input area */}
-          <div className="p-4 border-t border-white/10">
-            <LiquidGlass
-              borderRadius={inputBorderRadius}
-              blur={0.6}
-              contrast={0.6}
-              brightness={0.9}
-              saturation={0.9}
-              shadowIntensity={0.1}
-              justifyContent="start"
-            >
-              <div className={`flex w-full pl-4 pr-2 py-2 ${hasMultipleLines ? "items-end" : "items-center"}`}>
-                <textarea
-                  ref={textareaRef}
-                  value={inputValue}
-                  placeholder={isLoading ? "Thinking…" : "Type a message"}
-                  onChange={e => setInputValue(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit();
-                    }
-                  }}
-                  disabled={isLoading || !generateState.baseImageUrl}
-                  spellCheck={false}
-                  rows={1}
-                  className="flex-1 min-w-0 py-2 pr-2 bg-transparent border-none outline-none text-white placeholder-white/60 text-sm disabled:opacity-50 resize-none overflow-y-auto min-h-[2rem] max-h-24 scrollbar-hide"
-                  style={{
-                    height: "auto",
-                    minHeight: "2rem",
-                    borderRadius: `${inputBorderRadius}px`,
-                    paddingRight:
-                      textareaRef.current && textareaRef.current.scrollHeight > textareaRef.current.clientHeight
-                        ? "16px"
-                        : "8px",
-                  }}
-                  onInput={e => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = "auto";
-                    target.style.height = target.scrollHeight + "px";
-                    setTextareaHeight(target.scrollHeight);
-                    setInputBorderRadius(calculateBorderRadius());
-                    target.style.paddingRight = target.scrollHeight > target.clientHeight ? "16px" : "8px";
-                  }}
-                />
-                <button
-                  onClick={handleSubmit}
-                  disabled={isLoading || !inputValue.trim() || !generateState.baseImageUrl}
-                  className={`${hasMultipleLines ? "p-2" : "p-2"} m-0 shrink-0 transition-all duration-200 ${
-                    isLoading || !inputValue.trim() || !generateState.baseImageUrl
-                      ? "bg-transparent opacity-30 cursor-not-allowed"
-                      : "bg-white/20 backdrop-blur-sm opacity-80 hover:opacity-100 hover:scale-105"
-                  } rounded-xl text-white`}
-                  style={{ borderRadius: `${inputBorderRadius}px` }}
-                  title="Send"
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-white m-auto"
-                  >
-                    <path d="M22 2L11 13" />
-                    <path d="m22 2-7 20-4-9-9-4 20-7z" />
-                  </svg>
-                </button>
-              </div>
-            </LiquidGlass>
-          </div>
+          <ChatInput onSubmit={handleSubmit} isLoading={isLoading} disabled={!generateState.baseImageUrl} />
         </div>
       </div>
     </div>
